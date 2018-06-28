@@ -43,6 +43,7 @@ import CoreServices
 /// - https://www.ietf.org/rfc/rfc2388.txt
 /// - https://www.ietf.org/rfc/rfc2045.txt
 /// - https://www.w3.org/TR/html401/interact/forms.html#h-17.13
+
 open class MultipartFormData {
 
     // MARK: - Helper Types
@@ -57,7 +58,14 @@ open class MultipartFormData {
         }
 
         static func randomBoundary() -> String {
-            return String(format: "alamofire.boundary.%08x%08x", arc4random(), arc4random())
+            #if os(Linux)
+                let random1 = random()
+                let random2 = random()
+            #else
+                let random1 = arc4random()
+                let random2 = arc4random()
+            #endif
+            return String(format: "alamofire.boundary.%08x%08x", random1, random2)
         }
 
         static func boundaryData(forBoundaryType boundaryType: BoundaryType, boundary: String) -> Data {
@@ -268,17 +276,10 @@ open class MultipartFormData {
             return
         }
 
-        #if os(Linux) || os(Android) || os(Windows)
-            guard !isDirectory else {
-                setBodyPartError(withReason: .bodyPartFileIsDirectory(at: fileURL))
-                return
-            }
-        #else
-            guard !isDirectory.boolValue else {
-                setBodyPartError(withReason: .bodyPartFileIsDirectory(at: fileURL))
-                return
-            }
-        #endif
+        guard !isDirectory.boolValue else {
+            setBodyPartError(withReason: .bodyPartFileIsDirectory(at: fileURL))
+            return
+        }
 
         //============================================================
         //          Check 4 - can the file size be extracted?
